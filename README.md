@@ -2,6 +2,8 @@
 
 A read-only Liquid Glass card that sits on your macOS desktop wallpaper and shows what is playing. It is decoration, with no controls, and it is click-through. See [docs/PRD.md](docs/PRD.md).
 
+![The clock and the now-playing card on the desktop wallpaper](docs/screenshot.png)
+
 > **Status: v0.3.** The card shows artwork, a scrolling title and artist, animated waves, and a progress bar with times, plus an optional lock-screen-style clock beside it. Everything about the look is changeable in Settings and in one JSON file.
 
 **Requires macOS 26 and the Xcode command line tools.**
