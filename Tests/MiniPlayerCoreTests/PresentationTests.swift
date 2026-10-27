@@ -42,7 +42,8 @@ import Testing
     @Test func loopsSeamlessly() {
         // One loop scrolls exactly one text width plus the gap, then starts over at rest.
         let travel = 400.0 + 48.0, speed = 36.0, pause = 2.5
-        let cycle = pause + travel / speed
+        let cycle = Marquee.cycle(textWidth: 400, gap: 48, speed: speed, pause: pause)
+        #expect(abs(cycle - (pause + travel / speed)) < 0.0001)
         let nearEnd = Marquee.offset(elapsed: cycle - 0.001, textWidth: 400, containerWidth: 200, gap: 48, speed: speed, pause: pause)
         #expect(abs(nearEnd - -travel) < 0.1)
         #expect(Marquee.offset(elapsed: cycle, textWidth: 400, containerWidth: 200, gap: 48, speed: speed, pause: pause) == 0)

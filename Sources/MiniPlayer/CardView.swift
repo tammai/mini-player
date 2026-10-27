@@ -75,8 +75,7 @@ struct CardView: View {
             VStack(alignment: .leading, spacing: 0) {
                 MarqueeText(text: info.title, font: font(t.titleSize, .semibold), height: ceil(t.titleSize * 1.3))
                 if config.elements.artist, let artist = info.artist {
-                    MarqueeText(text: artist, font: font(t.artistSize, .regular), height: ceil(t.artistSize * 1.4))
-                        .foregroundStyle(.secondary)
+                    MarqueeText(text: artist, font: font(t.artistSize, .regular), height: ceil(t.artistSize * 1.4), secondary: true)
                 }
             }
             if wavesInRow { waves.offset(x: config.waves.offsetX, y: config.waves.offsetY) }
