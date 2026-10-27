@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 import MiniPlayerCore
 
 enum AdapterStatus: Equatable {
@@ -11,10 +11,13 @@ enum AdapterStatus: Equatable {
 @MainActor
 final class AppModel: ObservableObject {
     @Published private(set) var info: NowPlayingInfo?
+    /// Decoded artwork for the current track. Kept while idle so the card does not blank mid-fade.
+    @Published private(set) var artwork: NSImage?
     @Published private(set) var display: DisplayState = .idle
     @Published private(set) var adapterStatus: AdapterStatus = .starting
     @Published private(set) var hidden: Bool
 
+    private var lastInfo: NowPlayingInfo?
     private var store = NowPlayingStore()
     private var machine = DisplayStateMachine()
     private var wakeUp: Timer?
@@ -27,6 +30,11 @@ final class AppModel: ObservableObject {
 
     var editMode: Bool { machine.editMode }
 
+    /// What the card renders: demo content in Edit mode, otherwise the current track. The last
+    /// track is kept after the source closes so the 300ms fade-out does not show an empty card.
+    var cardInfo: NowPlayingInfo? { display == .edit ? .demo : (info ?? lastInfo) }
+    var cardArtwork: NSImage? { display == .edit ? nil : artwork }
+
     /// What the window should be doing: shown only when there is something to show.
     var cardVisible: Bool { display == .edit || (!hidden && display != .idle) }
 
@@ -35,6 +43,12 @@ final class AppModel: ObservableObject {
         guard store.apply(line: line) else { return }
         guard store.info != before else { return }
         machine.apply(info: store.info, now: .now)
+        if let new = store.info {
+            if new.artworkData != before?.artworkData {
+                artwork = new.artworkData.flatMap { NSImage(data: $0) }
+            }
+            lastInfo = new
+        }
         info = store.info
         refresh()
     }

@@ -60,3 +60,15 @@ public struct NowPlayingInfo: Equatable, Sendable {
         "\(title)\u{1F}\(artist ?? "")\u{1F}\(duration.map { String($0) } ?? "")"
     }
 }
+
+public extension NowPlayingInfo {
+    /// Sample content shown in Edit mode, so the card can be positioned with nothing playing.
+    /// It has no timestamp, so its progress stays put.
+    static let demo = NowPlayingInfo(
+        title: "Demo Track",
+        artist: "Demo Artist",
+        duration: 14217,
+        elapsedTime: 689,
+        playing: true
+    )
+}

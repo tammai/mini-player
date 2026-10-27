@@ -19,7 +19,7 @@ final class CardWindowController {
     private static let editingLevel = NSWindow.Level.floating
 
     private static let originKey = "windowOrigin"
-    private static let size = NSSize(width: 420, height: 110)
+    private static let size = NSSize(width: 540, height: 164)
 
     init(model: AppModel) {
         self.model = model
@@ -36,7 +36,7 @@ final class CardWindowController {
         window.isReleasedWhenClosed = false
 
         let glass = NSGlassEffectView(frame: NSRect(origin: .zero, size: Self.size))
-        glass.cornerRadius = 26
+        glass.cornerRadius = 28
         glass.contentView = NSHostingView(rootView: CardView(model: model))
         window.contentView = glass
 

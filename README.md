@@ -2,7 +2,7 @@
 
 A read-only Liquid Glass card that sits on your macOS desktop wallpaper and shows what is playing. It is decoration, with no controls, and it is click-through. See [docs/PRD.md](docs/PRD.md).
 
-> **Status: walking skeleton (v0.1).** The card shows title and artist from the system now-playing feed, with the menu bar item, the Playing/Paused/Idle/Edit states and the 30s pause timeout. Artwork, progress, waves and the settings pane are not built yet.
+> **Status: v0.2 (step 2 of the plan in the PRD).** The card shows artwork, a scrolling title and artist, animated wave bars, and a progress bar with elapsed and remaining time. It has the menu bar item, the Playing/Paused/Idle/Edit states, the 30s pause timeout, and Edit mode with demo content and dragging. The settings pane and JSON config are not built yet, so the look is fixed for now.
 
 **Requires macOS 26 and the Xcode command line tools.**
 
