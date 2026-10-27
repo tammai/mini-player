@@ -69,9 +69,10 @@ final class ClockWindowController {
         // Another Space can have another wallpaper behind the clock.
         observers.append(NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.requestTint() }
+            MainActor.assumeIsolated { self?.requestTint(force: true) }
         })
-        // Nothing announces a changed wallpaper, so look again now and then. It is cheap.
+        // Nothing announces a changed wallpaper, but the request notices a new wallpaper setting by itself and
+        // otherwise answers from the cache, so asking now and then costs nothing.
         let refresher = Timer(timeInterval: 30, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.requestTint() }
         }
@@ -83,9 +84,9 @@ final class ClockWindowController {
 
     /// Asks for a tint from the wallpaper behind the clock, but only when that is the selected color, so the
     /// Screen Recording permission is never requested for nothing.
-    private func requestTint() {
+    private func requestTint(force: Bool = false) {
         guard config.enabled, config.colorMode == .wallpaper, !model.hidden else { return }
-        tint.request(frame: window.frame, opacity: config.opacity)
+        tint.request(frame: window.frame, opacity: config.opacity, force: force)
     }
 
     /// The clock reports its size from inside its own SwiftUI update. Resizing the window right there

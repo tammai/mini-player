@@ -101,10 +101,10 @@ final class CardWindowController {
             MainActor.assumeIsolated { self?.reposition() }
         })
         // Another Space can have another wallpaper behind the card, and nothing announces a changed wallpaper,
-        // so look again on a Space change and now and then.
+        // so look again on a Space change, and now and then ask, which only reads when the wallpaper setting changed.
         observers.append(NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.requestAccentTint() }
+            MainActor.assumeIsolated { self?.requestAccentTint(force: true) }
         })
         let refresher = Timer(timeInterval: 30, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.requestAccentTint() }
@@ -116,9 +116,9 @@ final class CardWindowController {
 
     /// Samples the wallpaper behind the card, but only when the accent is tinted from it, so the Screen
     /// Recording permission is never requested for nothing.
-    private func requestAccentTint(frame: NSRect? = nil) {
+    private func requestAccentTint(frame: NSRect? = nil, force: Bool = false) {
         guard config.accent.mode == .wallpaper else { return }
-        accentTint.request(frame: frame ?? window.frame, opacity: 0.9)
+        accentTint.request(frame: frame ?? window.frame, opacity: 0.9, force: force)
     }
 
     // MARK: Config
