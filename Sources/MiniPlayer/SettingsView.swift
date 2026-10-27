@@ -6,6 +6,9 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var store: ConfigStore
     @ObservedObject var login: LoginItemController
+    /// The clock's tint and the card accent's tint, each sampled from its own patch of wallpaper.
+    @ObservedObject var clockTint: WallpaperTint
+    @ObservedObject var accentTint: WallpaperTint
 
     private static let fontFamilies = NSFontManager.shared.availableFontFamilies
 
@@ -107,11 +110,16 @@ struct SettingsView: View {
             Section("Color") {
                 Picker("Accent", selection: $store.config.accent.mode) {
                     Text("From the artwork").tag(AccentMode.auto)
+                    Text("Tinted from the wallpaper").tag(AccentMode.wallpaper)
                     Text("Custom color").tag(AccentMode.manual)
                     Text("Plain (system)").tag(AccentMode.system)
                 }
-                if store.config.accent.mode == .manual {
-                    ColorPicker("Accent color", selection: colorBinding($store.config.accent.hex), supportsOpacity: false)
+                if store.config.accent.mode == .wallpaper {
+                    tintStatus(accentTint, behind: "card")
+                }
+                if store.config.accent.mode == .manual || (store.config.accent.mode == .wallpaper && accentTint.color == nil) {
+                    ColorPicker(store.config.accent.mode == .manual ? "Accent color" : "Fallback color",
+                                selection: colorBinding($store.config.accent.hex), supportsOpacity: false)
                 }
             }
             Section("Text") {
@@ -193,6 +201,29 @@ struct SettingsView: View {
             } footer: {
                 Text("The clock stays on the desktop when nothing is playing.")
             }
+            Section {
+                SliderRow("Size", $store.config.clock.size, 24...300, format: "%.0f pt")
+                Picker("Color", selection: $store.config.clock.colorMode) {
+                    Text("Tinted from the wallpaper").tag(ClockColorMode.wallpaper)
+                    Text("Custom color").tag(ClockColorMode.custom)
+                }
+                if store.config.clock.colorMode == .wallpaper {
+                    tintStatus(clockTint, behind: "clock")
+                }
+                if store.config.clock.colorMode == .custom || clockTint.color == nil {
+                    ColorPicker(store.config.clock.colorMode == .custom ? "Color" : "Fallback color",
+                                selection: colorBinding($store.config.clock.colorHex), supportsOpacity: false)
+                }
+                SliderRow("Opacity", $store.config.clock.opacity, 0.1...1, format: "%.2f")
+                Picker("Font", selection: fontBinding($store.config.clock.fontName)) {
+                    Text("System (compressed)").tag("")
+                    ForEach(Self.fontFamilies, id: \.self) { Text($0).tag($0) }
+                }
+            } header: {
+                Text("Look")
+            } footer: {
+                Text("The clock never grows past the player's width or height. A larger size is scaled down to fit.")
+            }
             Section("Date") {
                 Toggle("Show the date", isOn: $store.config.clock.showDate)
                 if store.config.clock.showDate {
@@ -221,19 +252,6 @@ struct SettingsView: View {
                 SliderRow("Gap", $store.config.clock.gap, 0...200, format: "%.0f pt")
                 SliderRow("Offset →", $store.config.clock.offsetX, -400...400, format: "%.0f pt")
                 SliderRow("Offset ↓", $store.config.clock.offsetY, -400...400, format: "%.0f pt")
-            }
-            Section {
-                SliderRow("Size", $store.config.clock.size, 24...300, format: "%.0f pt")
-                ColorPicker("Color", selection: colorBinding($store.config.clock.colorHex), supportsOpacity: false)
-                SliderRow("Opacity", $store.config.clock.opacity, 0.1...1, format: "%.2f")
-                Picker("Font", selection: fontBinding($store.config.clock.fontName)) {
-                    Text("System (compressed)").tag("")
-                    ForEach(Self.fontFamilies, id: \.self) { Text($0).tag($0) }
-                }
-            } header: {
-                Text("Look")
-            } footer: {
-                Text("The clock never grows past the player's width or height. A larger size is scaled down to fit.")
             }
         }
         .formStyle(.grouped)
@@ -298,6 +316,29 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         .onAppear { login.refresh() }
+    }
+
+    /// What a wallpaper tint is doing, and what to do when it cannot work.
+    @ViewBuilder private func tintStatus(_ tint: WallpaperTint, behind subject: String) -> some View {
+        switch tint.state {
+        case .idle:
+            Text("Looking at the wallpaper behind the \(subject)…").font(.callout).foregroundStyle(.secondary)
+        case .tinted(let color):
+            HStack(spacing: 8) {
+                Circle().fill(Color(nsColor: color.nsColor)).frame(width: 14, height: 14)
+                    .overlay(Circle().strokeBorder(.secondary.opacity(0.4)))
+                Text("Tinted \(color.hex) from the wallpaper behind the \(subject)").font(.callout).foregroundStyle(.secondary)
+            }
+        case .needsPermission:
+            VStack(alignment: .leading, spacing: 6) {
+                Text("To see the wallpaper behind the \(subject), mini-player needs the Screen Recording permission. It only looks at the wallpaper, never at your windows. After allowing it, quit and reopen mini-player. Until then the fallback color is used.")
+                    .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Button("Open Privacy Settings") { tint.openPrivacySettings() }
+            }
+        case .failed(let message):
+            Text("Could not read the wallpaper (\(message)). The fallback color is used.")
+                .font(.callout).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     // MARK: Helpers

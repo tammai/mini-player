@@ -20,6 +20,7 @@ final class CardWindowController {
 
     private let model: AppModel
     private let store: ConfigStore
+    private let accentTint: WallpaperTint
     private let background = CardBackgroundView()
     private var config: Config
     private var cancellables: Set<AnyCancellable> = []
@@ -39,9 +40,10 @@ final class CardWindowController {
 
     let geometry = CardGeometry()
 
-    init(model: AppModel, store: ConfigStore) {
+    init(model: AppModel, store: ConfigStore, accentTint: WallpaperTint) {
         self.model = model
         self.store = store
+        self.accentTint = accentTint
         config = store.config
 
         window = NSWindow(contentRect: NSRect(origin: .zero, size: contentSize),
@@ -56,7 +58,8 @@ final class CardWindowController {
         window.isReleasedWhenClosed = false
 
         let hosting = NSHostingView(rootView: CardView(
-            model: model, store: store, onContentSize: { [weak self] size in self?.contentSizeChanged(size) }))
+            model: model, store: store, accentTint: accentTint,
+            onContentSize: { [weak self] size in self?.contentSizeChanged(size) }))
         // The window controller owns the window's size. By default the hosting view clamps the window
         // to SwiftUI's current min/max size, which lags a settings change by one edit.
         hosting.sizingOptions = []
@@ -97,7 +100,25 @@ final class CardWindowController {
         observers.append(center.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.reposition() }
         })
+        // Another Space can have another wallpaper behind the card, and nothing announces a changed wallpaper,
+        // so look again on a Space change and now and then.
+        observers.append(NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.requestAccentTint() }
+        })
+        let refresher = Timer(timeInterval: 30, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.requestAccentTint() }
+        }
+        RunLoop.main.add(refresher, forMode: .common)
         sync()
+        requestAccentTint()
+    }
+
+    /// Samples the wallpaper behind the card, but only when the accent is tinted from it, so the Screen
+    /// Recording permission is never requested for nothing.
+    private func requestAccentTint(frame: NSRect? = nil) {
+        guard config.accent.mode == .wallpaper else { return }
+        accentTint.request(frame: frame ?? window.frame, opacity: 0.9)
     }
 
     // MARK: Config
@@ -107,6 +128,7 @@ final class CardWindowController {
         config = new
         if new.card.scale != old.card.scale { applySize() }
         if new.card != old.card || new.background != old.background { applyBackground() }
+        if new.accent != old.accent { requestAccentTint() }
         // Where the clock sits around the card changes the pair's bounds, and so where the card goes.
         if new.clock != old.clock && new.position == old.position { updateFrame() }
         // A new place glides there; a scale change just resizes.
@@ -201,6 +223,7 @@ final class CardWindowController {
             movingProgrammatically = false
         }
         applyBackground()
+        requestAccentTint(frame: frame)  // it is over a different part of the wallpaper now
         if geometry.size != size { geometry.size = size }  // @Published fires even for equal values
     }
 

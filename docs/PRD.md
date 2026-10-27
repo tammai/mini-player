@@ -151,7 +151,7 @@ mini-player is a **read-only, click-through Liquid Glass card that sits on the w
 |---|---|
 | Card | Scale, corner radius, artwork side (left or right), artwork fit (whole image, or a cropped square) and size |
 | Background | Type (Liquid Glass, frosted blur, or none), opacity, glass style or blur material, optional tint color and strength |
-| Color | Accent: auto from artwork, or manual |
+| Color | Accent (progress bar, waves): from the artwork, **tinted from the wallpaper behind the card** (the same way as the clock, with the custom color as the fallback), a custom color, or plain system color |
 | Text | Font family and size |
 | Elements | Show or hide: artwork, artist, progress bar, times, wave indicator |
 | Waves | Bar count, thickness, gap, max height, corner roundness, shape (bars, mirrored, dots), baseline (bottom or center), placement within the card plus offset, color |
@@ -161,6 +161,7 @@ mini-player is a **read-only, click-through Liquid Glass card that sits on the w
 - The background is a separate layer behind the content, so its opacity never fades the text. Frosted blur offers the macOS blur materials (a strength ladder, not a continuous radius: macOS has no public continuous backdrop blur).
 - Hiding elements keeps the rest stacked with even spacing and **centered** in the card's height, not stuck to the top and bottom edges.
 - Acceptance:
+  - [x] The accent in wallpaper mode gives a different fill from the artwork and custom modes, is stable when switched back to (measured on the progress bar: wallpaper `#586D52`, artwork `#B9C469`, custom red `#D9503F`).
   - [x] Opacity 0.4 on glass renders at alpha 0.40 and 0 for "none" (measured on the captured pixels); text is unaffected.
   - [x] Hiding any combination of artist, waves, progress, times and artwork leaves the remaining items centered (checked on title only, title + artist, title + waves).
   - [x] Hiding and showing the artwork in any order leaves the glass filling the window (measured: 0 px gap in every state).
@@ -191,12 +192,15 @@ mini-player is a **read-only, click-through Liquid Glass card that sits on the w
 - Default: **on, to the left of the card, vertically centered.** Because that needs room, the card's default place is the Bottom - Right point, where the pair fits comfortably on the screen.
 - **Twelve anchors** around the card: above (left, center, right), below (left, center, right), left (top, center, bottom), and right (top, center, bottom). Edges align as the name says (`leftCenter` = left of the card, centers aligned). A gap and fine offsets (positive = right and down) adjust from there.
 - **Resizable:** size is the time's font size, 24 to 300 pt. The date scales with it. **The clock never grows past the player's width or height:** a larger size is scaled down to fit (a 300 pt setting gives a clock exactly as tall as the card).
+- **Color: tinted from the wallpaper (the default), or custom.** Like the lock screen, the clock takes the hue of the wallpaper behind it and a lightness that stands out from it: a pale sky gets a deep teal clock, a dark wallpaper a light one. It samples only the part of the wallpaper behind the clock, and again when the clock moves, the Space changes, or every 30 seconds. The tint is chosen so the clock, at its opacity, keeps a contrast ratio near 4.5 where the limits allow. It needs the **Screen Recording** permission, which is asked for only when this color is selected. Without it, or when it fails, the custom color is the fallback and Settings says why.
 - **Date options:** above or below the time; aligned left, center or right with the time; a distance from the time (negative pulls closer) and a sideways shift.
 - Settings: show or hide the clock and the date, 12 or 24 hour or follow the system, color, opacity, font, anchor, gap, offsets, size.
 - The clock follows the card: dragging the card in Edit mode moves the clock with it, and the clock is always kept on screen. It also stays put when the card is hidden or idle, because it is placed from the card's frame, not its visibility.
 - **The clock stays visible when nothing is playing.** It is a clock. It hides with "Hide Widget" and with its own switch.
 - Acceptance:
   - [x] A size larger than the card allows is clamped: the clock window never exceeds the card's width or height (measured: 206x164 against a 540x164 card; unit-tested).
+  - [x] On the author's wallpaper, the area behind the clock averages `#9CCECB` and the clock is drawn in deep teal (contrast at 70% opacity 3.7, against 1.5 for white). Switching to a custom color changes the drawn digits from the tint to that color (measured on the captured digits).
+  - [ ] With the permission denied, the clock uses the fallback color and Settings explains how to allow it (written, but not exercised: the test process already had the permission).
   - [x] Date placement and alignment change the layout as set (checked above/below and left/right).
   - [x] All twelve anchors place the clock outside the card on the named side with the named alignment (unit-tested for each).
   - [x] The clock re-anchors when the card resizes or moves (verified: card scale 1.0 to 1.5 to 0.8 kept the 24 pt gap each time).
@@ -239,6 +243,9 @@ Designed for, not built:
 - `NSHostingView` clamps its window to SwiftUI's current min and max size unless `sizingOptions = []`, which made resizes lag one edit behind.
 - `NSWindow.animator()` only animates `setFrame`; `setFrameOrigin` silently does nothing.
 - `@Published` publishes even when the new value equals the old, so state shared between windows is only assigned when it changes.
+
+- Do not find the wallpaper by reading its file. `NSWorkspace.desktopImageURL` returned a stale path on the author's Mac, and macOS's own wallpaper store held several entries per display and Space, one of which named a file that no longer exists while a cached copy of it was still drawn. A file-based lookup confidently picked a different photo. Capturing the Dock's wallpaper window shows what is really on screen.
+- The Screen Recording permission is tied to the app's code signature. An ad-hoc signed local build gets a new signature on every rebuild, so macOS may ask again after a rebuild. A stable local signing certificate avoids that.
 
 **Risks:**
 - **Private-API fragility.** An OS update can break the adapter. Mitigation: run the adapter's `test` at launch and show a clear unavailable state. The README discloses the dependency. The adapter is actively maintained.

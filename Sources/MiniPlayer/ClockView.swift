@@ -6,6 +6,7 @@ import SwiftUI
 struct ClockView: View {
     @ObservedObject var store: ConfigStore
     @ObservedObject var geometry: CardGeometry
+    @ObservedObject var tint: WallpaperTint
     /// Reports the clock's final (possibly scaled-down) size so its window can match it.
     var onSize: (CGSize) -> Void
 
@@ -32,7 +33,7 @@ struct ClockView: View {
 
     private var content: some View {
         let c = clock
-        let tint = (RGB(hex: c.colorHex) ?? RGB(r: 1, g: 1, b: 1)).nsColor
+        let base = baseColor.nsColor
         let dateAbove = c.datePlacement == .above
         let spacing = -c.size * 0.06 + c.dateGap
         return TimelineView(.everyMinute) { context in
@@ -45,12 +46,21 @@ struct ClockView: View {
             }
             // Lighter toward the bottom, like glass catching light.
             .foregroundStyle(LinearGradient(
-                colors: [Color(nsColor: tint).opacity(c.opacity * 0.75), Color(nsColor: tint).opacity(c.opacity)],
+                colors: [Color(nsColor: base).opacity(c.opacity * 0.75), Color(nsColor: base).opacity(c.opacity)],
                 startPoint: .top, endPoint: .bottom))
+            .animation(.easeInOut(duration: 0.8), value: baseColor)  // a new wallpaper or a new spot fades to its tint
             .shadow(color: .black.opacity(0.12), radius: c.size * 0.05, y: 2)
             .fixedSize()
             .padding(c.size * 0.12)  // room for the shadow so it is not clipped
         }
+    }
+
+    /// The tint from the wallpaper when that is selected and available; otherwise the custom color, which is also
+    /// the fallback while the wallpaper cannot be read.
+    private var baseColor: RGB {
+        let custom = RGB(hex: clock.colorHex) ?? RGB(r: 1, g: 1, b: 1)
+        guard clock.colorMode == .wallpaper else { return custom }
+        return tint.color ?? custom
     }
 
     private func date(_ date: Date) -> some View {

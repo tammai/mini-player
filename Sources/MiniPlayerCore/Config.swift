@@ -28,6 +28,8 @@ public enum FrostMaterial: String, Codable, Sendable, CaseIterable {
 public enum AccentMode: String, Codable, Sendable, CaseIterable {
     /// Taken from the artwork.
     case auto
+    /// Tinted from the wallpaper behind the card, like the clock can be. `accent.hex` is the fallback.
+    case wallpaper
     /// The color in `accent.hex`.
     case manual
     /// The system label color: plain black or white, whichever reads on the glass.
@@ -55,6 +57,12 @@ public enum ClockAnchor: String, Codable, Sendable, CaseIterable {
     case bottomLeft, bottomCenter, bottomRight
     case leftTop, leftCenter, leftBottom
     case rightTop, rightCenter, rightBottom
+}
+public enum ClockColorMode: String, Codable, Sendable, CaseIterable {
+    /// Tinted from the wallpaper behind the clock, like the lock screen.
+    case wallpaper
+    /// The color in `clock.colorHex`.
+    case custom
 }
 public enum ClockDatePlacement: String, Codable, Sendable, CaseIterable { case above, below }
 public enum ClockDateAlignment: String, Codable, Sendable, CaseIterable { case left, center, right }
@@ -253,6 +261,8 @@ public struct ClockSettings: Equatable, Codable, Sendable {
     /// Shifts the date sideways from where its alignment puts it. Positive moves right.
     public var dateOffsetX = 0.0
     public var format = ClockFormat.system
+    public var colorMode = ClockColorMode.wallpaper
+    /// Used when `colorMode` is custom, and as the fallback when the wallpaper cannot be read.
     public var colorHex = "#FFFFFF"
     public var opacity = 0.7
     /// A font family name, or nil for the system compressed font.
@@ -261,7 +271,7 @@ public struct ClockSettings: Equatable, Codable, Sendable {
     public init() {}
     enum CodingKeys: String, CodingKey {
         case enabled, anchor, gap, offsetX, offsetY, size, showDate, datePlacement, dateAlignment, dateGap, dateOffsetX
-        case format, colorHex, opacity, fontName
+        case format, colorMode, colorHex, opacity, fontName
     }
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -277,6 +287,7 @@ public struct ClockSettings: Equatable, Codable, Sendable {
         dateGap = c.value(.dateGap, dateGap)
         dateOffsetX = c.value(.dateOffsetX, dateOffsetX)
         format = c.value(.format, format)
+        colorMode = c.value(.colorMode, colorMode)
         colorHex = c.value(.colorHex, colorHex)
         opacity = c.value(.opacity, opacity)
         fontName = c.optionalValue(.fontName)
@@ -295,6 +306,7 @@ public struct ClockSettings: Equatable, Codable, Sendable {
         try c.encode(dateGap, forKey: .dateGap)
         try c.encode(dateOffsetX, forKey: .dateOffsetX)
         try c.encode(format, forKey: .format)
+        try c.encode(colorMode, forKey: .colorMode)
         try c.encode(colorHex, forKey: .colorHex)
         try c.encode(opacity, forKey: .opacity)
         try c.encode(fontName, forKey: .fontName)

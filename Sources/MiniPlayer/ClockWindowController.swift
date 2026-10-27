@@ -12,17 +12,19 @@ final class ClockWindowController {
     private let cardWindow: NSWindow
     private let window: NSWindow
     private let geometry: CardGeometry
+    private let tint: WallpaperTint
     private var config: ClockSettings
     private var size = CGSize(width: 260, height: 160)
     private var editing = false
     private var cancellables: Set<AnyCancellable> = []
     private var observers: [NSObjectProtocol] = []
 
-    init(model: AppModel, store: ConfigStore, cardWindow: NSWindow, geometry: CardGeometry) {
+    init(model: AppModel, store: ConfigStore, cardWindow: NSWindow, geometry: CardGeometry, tint: WallpaperTint) {
         self.model = model
         self.store = store
         self.cardWindow = cardWindow
         self.geometry = geometry
+        self.tint = tint
         config = store.config.clock
 
         window = NSWindow(contentRect: NSRect(origin: .zero, size: size),
@@ -35,7 +37,7 @@ final class ClockWindowController {
         window.ignoresMouseEvents = true  // the clock is placed by anchor, never dragged
         window.alphaValue = 0
         window.isReleasedWhenClosed = false
-        let hosting = NSHostingView(rootView: ClockView(store: store, geometry: geometry, onSize: { [weak self] size in
+        let hosting = NSHostingView(rootView: ClockView(store: store, geometry: geometry, tint: tint, onSize: { [weak self] size in
             self?.sizeChanged(size)
         }))
         hosting.sizingOptions = []  // the window follows the size we measure, not the other way round
@@ -46,6 +48,7 @@ final class ClockWindowController {
                 self?.config = new
                 self?.reposition()
                 self?.sync()
+                self?.requestTint()  // the mode or the opacity may have changed
             }
             .store(in: &cancellables)
         model.objectWillChange
@@ -63,8 +66,26 @@ final class ClockWindowController {
         observers.append(center.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.reposition() }
         })
+        // Another Space can have another wallpaper behind the clock.
+        observers.append(NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.requestTint() }
+        })
+        // Nothing announces a changed wallpaper, so look again now and then. It is cheap.
+        let refresher = Timer(timeInterval: 30, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.requestTint() }
+        }
+        RunLoop.main.add(refresher, forMode: .common)
         reposition()
         sync()
+        requestTint()
+    }
+
+    /// Asks for a tint from the wallpaper behind the clock, but only when that is the selected color, so the
+    /// Screen Recording permission is never requested for nothing.
+    private func requestTint() {
+        guard config.enabled, config.colorMode == .wallpaper, !model.hidden else { return }
+        tint.request(frame: window.frame, opacity: config.opacity)
     }
 
     /// The clock reports its size from inside its own SwiftUI update. Resizing the window right there
@@ -98,7 +119,10 @@ final class ClockWindowController {
         let origin = ClockLayout.origin(anchor: config.anchor, card: card, clock: size, gap: config.gap,
                                         offsetX: config.offsetX, offsetY: config.offsetY, in: area)
         let frame = NSRect(origin: origin, size: size)
-        if frame != window.frame { window.setFrame(frame, display: true) }
+        if frame != window.frame {
+            window.setFrame(frame, display: true)
+            requestTint()  // it is over a different part of the wallpaper now
+        }
     }
 
     private func sync() {

@@ -7,6 +7,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let model = AppModel()
     private let store = ConfigStore()
     private let loginItem = LoginItemController()
+    /// One tint for the clock and one for the card's accent: each looks at its own patch of wallpaper.
+    private let clockTint = WallpaperTint()
+    private let accentTint = WallpaperTint()
     private var statusItem: NSStatusItem!
     private var cardWindow: CardWindowController!
     private var clockWindow: ClockWindowController!
@@ -33,9 +36,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             source.resume()
             signalSources.append(source)
         }
-        cardWindow = CardWindowController(model: model, store: store)
-        clockWindow = ClockWindowController(model: model, store: store, cardWindow: cardWindow.window, geometry: cardWindow.geometry)
-        settings = SettingsWindowController(store: store, login: loginItem)
+        cardWindow = CardWindowController(model: model, store: store, accentTint: accentTint)
+        clockWindow = ClockWindowController(model: model, store: store, cardWindow: cardWindow.window, geometry: cardWindow.geometry,
+                                           tint: clockTint)
+        settings = SettingsWindowController(store: store, login: loginItem, clockTint: clockTint, accentTint: accentTint)
         settings.onClose = { [weak self] in
             guard let self else { return }
             model.setEditMode(editModeBeforeSettings)  // leave Edit mode if opening Settings was what entered it

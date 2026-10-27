@@ -23,6 +23,24 @@ public struct RGB: Equatable, Sendable {
         return String(format: "#%02X%02X%02X", byte(r), byte(g), byte(b))
     }
 
+    /// WCAG relative luminance, 0 (black) to 1 (white).
+    public var relativeLuminance: Double {
+        func linear(_ c: Double) -> Double { c <= 0.03928 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4) }
+        return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b)
+    }
+
+    /// WCAG contrast ratio between two colors, 1 (identical) to 21 (black on white).
+    public static func contrast(_ a: RGB, _ b: RGB) -> Double {
+        let (la, lb) = (a.relativeLuminance, b.relativeLuminance)
+        return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+    }
+
+    /// This color drawn at `opacity` over `backdrop`.
+    public func blended(over backdrop: RGB, opacity: Double) -> RGB {
+        let o = min(1, max(0, opacity))
+        return RGB(r: r * o + backdrop.r * (1 - o), g: g * o + backdrop.g * (1 - o), b: b * o + backdrop.b * (1 - o))
+    }
+
     public var hsb: (h: Double, s: Double, b: Double) {
         let maxV = max(r, g, b), minV = min(r, g, b), d = maxV - minV
         var h = 0.0

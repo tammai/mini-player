@@ -7,6 +7,8 @@ import SwiftUI
 struct CardView: View {
     @ObservedObject var model: AppModel
     @ObservedObject var store: ConfigStore
+    /// Tint sampled from the wallpaper behind the card, for `accent.mode = wallpaper`.
+    @ObservedObject var accentTint: WallpaperTint
     /// Reports the card's natural size (before scaling) so the window can match it.
     var onContentSize: (CGSize) -> Void
 
@@ -124,6 +126,8 @@ struct CardView: View {
         case .system: return nil
         case .manual: return RGB(hex: config.accent.hex)
         case .auto: return model.autoAccent ?? (editing ? RGB(hex: config.accent.hex) : nil)
+        // Until the wallpaper can be read, the custom color stands in.
+        case .wallpaper: return accentTint.color ?? RGB(hex: config.accent.hex)
         }
     }
 

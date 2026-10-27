@@ -11,22 +11,26 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     private var window: NSWindow?
     private let store: ConfigStore
     private let login: LoginItemController
+    private let clockTint: WallpaperTint
+    private let accentTint: WallpaperTint
     private var placing = false
     private var movedByUser = false
 
     /// Called when the window closes.
     var onClose: (() -> Void)?
 
-    init(store: ConfigStore, login: LoginItemController) {
+    init(store: ConfigStore, login: LoginItemController, clockTint: WallpaperTint, accentTint: WallpaperTint) {
         self.store = store
         self.login = login
+        self.clockTint = clockTint
+        self.accentTint = accentTint
     }
 
     var isOpen: Bool { window?.isVisible ?? false }
 
     func show() {
         if window == nil {
-            let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView(store: store, login: login)))
+            let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView(store: store, login: login, clockTint: clockTint, accentTint: accentTint)))
             window.title = "mini-player Settings"
             window.styleMask = [.titled, .closable, .miniaturizable]
             window.isReleasedWhenClosed = false
