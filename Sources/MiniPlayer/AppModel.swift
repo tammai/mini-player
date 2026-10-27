@@ -13,6 +13,8 @@ final class AppModel: ObservableObject {
     @Published private(set) var info: NowPlayingInfo?
     /// Decoded artwork for the current track. Kept while idle so the card does not blank mid-fade.
     @Published private(set) var artwork: NSImage?
+    /// The artwork's most prominent color, for `accent.mode = auto`. nil for grayscale or missing art.
+    @Published private(set) var autoAccent: RGB?
     @Published private(set) var display: DisplayState = .idle
     @Published private(set) var adapterStatus: AdapterStatus = .starting
     @Published private(set) var hidden: Bool
@@ -46,10 +48,16 @@ final class AppModel: ObservableObject {
         if let new = store.info {
             if new.artworkData != before?.artworkData {
                 artwork = new.artworkData.flatMap { NSImage(data: $0) }
+                autoAccent = artwork.flatMap { AccentExtractor.accent(from: $0) }
             }
             lastInfo = new
         }
         info = store.info
+        refresh()
+    }
+
+    func setPauseTimeout(_ seconds: TimeInterval) {
+        machine.pauseTimeout = seconds
         refresh()
     }
 

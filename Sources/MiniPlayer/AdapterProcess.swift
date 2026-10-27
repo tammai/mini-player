@@ -90,8 +90,7 @@ final class AdapterProcess {
     // or `kill -9`, the PID is recorded and a leftover process is reaped at the next launch.
 
     private static var pidFile: URL {
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("mini-player/adapter.pid")
+        ConfigStore.supportDirectory.appendingPathComponent("adapter.pid")
     }
 
     private func recordPID(_ pid: Int32) {
