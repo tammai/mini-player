@@ -48,4 +48,4 @@ MINIPLAYER_ADAPTER_TESTCLIENT=$A/build/MediaRemoteAdapterTestClient \
 
 ## License
 
-MIT for this project (a `LICENSE` file is still to be added). The bundled adapter is BSD-3-Clause, and its license is copied into the app bundle.
+MIT, see [LICENSE](LICENSE). The now-playing adapter that gets bundled into the app is BSD-3-Clause, see [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES). The build script also copies its license into the app bundle.
