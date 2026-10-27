@@ -2,7 +2,7 @@
 
 A read-only Liquid Glass card that sits on your macOS desktop wallpaper and shows what is playing. It is decoration, with no controls, and it is click-through. See [docs/PRD.md](docs/PRD.md).
 
-> **Status: v0.2 (step 2 of the plan in the PRD).** The card shows artwork, a scrolling title and artist, animated wave bars, and a progress bar with elapsed and remaining time. It has the menu bar item, the Playing/Paused/Idle/Edit states, the 30s pause timeout, and Edit mode with demo content and dragging. The settings pane and JSON config are not built yet, so the look is fixed for now.
+> **Status: v0.3.** The card shows artwork, a scrolling title and artist, animated waves, and a progress bar with times, plus an optional lock-screen-style clock beside it. Everything about the look is changeable in Settings and in one JSON file.
 
 **Requires macOS 26 and the Xcode command line tools.**
 
@@ -17,7 +17,17 @@ scripts/build-app.sh          # assembles build/MiniPlayer.app (ad-hoc signed)
 open build/MiniPlayer.app
 ```
 
-Use the waveform icon in the menu bar to hide or show the card and to enter Edit mode (drag the card where you want it, then turn Edit mode off to lock it).
+Use the waveform icon in the menu bar to hide or show the widget, change its position, open **Settings** (⌘,), or reveal the config file.
+
+- **Change Position** (in the menu bar menu) puts the card on one of nine points of the rule-of-thirds grid: Center, Center - Left, Center - Right, Center - Top, Center - Bottom, Top - Left, Top - Right, Bottom - Left, Bottom - Right. It is the **center of the player and the clock together** that lands on the point. **Custom** keeps the card where it is and lets you drag it anywhere (it floats above your windows while you do; choose Custom again to finish). Dropped close to one of the nine points it snaps there. Settings > Position has the same nine points as a small map. Opening Settings turns dragging on, so you see every change live.
+- **Background** can be Liquid Glass, a frosted blur (pick a macOS blur material), or nothing at all, with its own opacity and an optional tint. Content stays fully opaque. Hiding elements keeps what is left centered in the card.
+- **The clock** sits just outside the card at one of twelve anchors (above, below, left or right, each aligned start, center or end) and follows the card. It is never larger than the card, the date can sit above or below the time with its own alignment, and it stays on the desktop when nothing is playing.
+
+## Configuration
+
+Settings are saved to `~/Library/Application Support/mini-player/config.json` and the file is the source of truth: edit it by hand while the app runs and the widget updates within a second. A missing key takes its default, a wrong value falls back to its default, and numbers are clamped to sensible ranges. If the file is not valid JSON at launch, the app starts with defaults and keeps your original as `config.json.bak`. To share a look, share the file.
+
+The groups are `card`, `background`, `accent`, `text`, `elements`, `waves`, `clock`, `position` and `general`; the file written on first run lists every key. Set `MINIPLAYER_CONFIG_DIR` to use a different folder.
 
 ## Develop
 

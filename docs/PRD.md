@@ -1,6 +1,6 @@
 # mini-player: Product Requirements Document
 
-**Status:** Draft v1 · **Date:** 2026-10-27 · **Platform:** macOS 26 only · **License:** MIT (public GitHub repo)
+**Status:** Draft v1.1 (clock added, settings built) · **Date:** 2026-10-27 · **Platform:** macOS 26 only · **License:** MIT (public GitHub repo)
 
 ## 1. Problem Statement
 
@@ -43,6 +43,7 @@ mini-player is a **read-only, click-through Liquid Glass card that sits on the w
 - As a desktop customizer, I want to unlock it, drag it where I like, and lock it again so that it sits exactly where it looks best.
 - As a desktop customizer, I want to tweak size, glass, color, font, waves and visible elements, and see the result immediately, so that I can match my wallpaper.
 - As a desktop customizer, I want it to launch at login so that I never think about it.
+- As a desktop customizer, I want a large translucent clock beside the player, like my lock screen, that I can anchor to any of twelve places around the card and resize, so that the wallpaper carries the time as well as the music.
 
 **An open-source user (builder)**
 - As a developer, I want clear build steps and honest notes about the private-API dependency so that I can build it and know what might break after an OS update.
@@ -123,15 +124,23 @@ mini-player is a **read-only, click-through Liquid Glass card that sits on the w
   - [ ] Checked by eye on a light, a dark, and a high-detail wallpaper. Title and times are readable in all three.
 
 **R8. Menu bar app**
-- Items: Show/Hide widget, Edit mode (on/off), Settings…, Quit.
+- Items: Hide/Show Widget, **Change Position** (a submenu: Custom, Center, Center - Left, Center - Right, Center - Top, Center - Bottom, Top - Left, Top - Right, Bottom - Left, Bottom - Right, with a check mark on the current one), Settings…, Show Config in Finder, Quit.
 - Acceptance:
   - [ ] Hide removes the card immediately and persists across relaunch.
-  - [ ] Edit mode on makes the card draggable. Edit mode off locks it and saves its position.
+  - [x] The Change Position submenu lists exactly those ten items and checks the current one (checked for each).
+  - [x] Custom keeps the card where it is and turns dragging on (Edit mode); choosing it again, now titled "Custom - Finish Dragging", locks it and saves its position.
 
 **R9. Positioning**
-- In Edit mode: drag freely and snap to screen corners with a configurable margin.
-- The position is saved relative to a display. If that display is missing at launch, fall back to the main display with the same relative position.
+- **Nine places, all points on the rule-of-thirds grid:** x and y each at one third, one half and two thirds of the screen's visible area. The center of the grid is the Center point; the four points where the third lines cross are Top - Left, Top - Right, Bottom - Left and Bottom - Right; the four points where the third lines run through the middle of each side are Center - Left, Center - Right, Center - Top and Center - Bottom.
+- **The thing placed on a point is the center of the player and the clock together**, so the pair moves as one. With the clock off or hidden it is just the player.
+- **Custom** is any other spot: drag the card in Edit mode. Dropped within 64 pt of a point it snaps there (switchable); otherwise it is kept as a custom position.
+- The same nine points are in the menu (Change Position) and in Settings > Position as a small map of the thirds grid with a mini card shown on the chosen point.
+- The least distance from any screen edge (default 32 pt) still applies: a point that would push the pair closer to an edge than that is pulled in. If the pair is too big for that margin on a small screen it is centered instead.
+- The position is saved relative to a display. If that display is missing at launch, fall back to the main display with the same relative position. Files written when positions were corners still load (`corner` is read as the anchor).
 - Acceptance:
+  - [x] For each of the nine points, the center of the card and clock together lands on the exact rule-of-thirds coordinate (measured on screen: within 1 pt, which is window-server rounding).
+  - [x] Dropping the pair about 32 pt from Top - Left snaps to it; dropping it far from every point keeps a custom position.
+  - [x] Choosing a point glides the card there, and the clock follows it.
   - [ ] The position survives quit and relaunch.
   - [ ] Unplugging the saved display does not place the card off-screen.
 
@@ -140,14 +149,21 @@ mini-player is a **read-only, click-through Liquid Glass card that sits on the w
 
 | Group | Settings |
 |---|---|
-| Card | Scale, corner radius, glass tint and opacity, artwork side (left or right), artwork fit or fill and size |
+| Card | Scale, corner radius, artwork side (left or right), artwork fit (whole image, or a cropped square) and size |
+| Background | Type (Liquid Glass, frosted blur, or none), opacity, glass style or blur material, optional tint color and strength |
 | Color | Accent: auto from artwork, or manual |
 | Text | Font family and size |
 | Elements | Show or hide: artwork, artist, progress bar, times, wave indicator |
 | Waves | Bar count, thickness, gap, max height, corner roundness, shape (bars, mirrored, dots), baseline (bottom or center), placement within the card plus offset, color |
-| Position | Snap, margin, display |
+| Position | One of nine rule-of-thirds points or Custom, snap, least distance from the edge, display |
+| Clock | See R14 |
 
+- The background is a separate layer behind the content, so its opacity never fades the text. Frosted blur offers the macOS blur materials (a strength ladder, not a continuous radius: macOS has no public continuous backdrop blur).
+- Hiding elements keeps the rest stacked with even spacing and **centered** in the card's height, not stuck to the top and bottom edges.
 - Acceptance:
+  - [x] Opacity 0.4 on glass renders at alpha 0.40 and 0 for "none" (measured on the captured pixels); text is unaffected.
+  - [x] Hiding any combination of artist, waves, progress, times and artwork leaves the remaining items centered (checked on title only, title + artist, title + waves).
+  - [x] Hiding and showing the artwork in any order leaves the glass filling the window (measured: 0 px gap in every state).
   - [ ] Dragging any slider updates the on-desktop widget within 1s, with no relaunch.
   - [ ] "Reset to default" restores the factory look.
   - [ ] Hiding all optional elements still shows a valid card (the title remains).
@@ -170,6 +186,23 @@ mini-player is a **read-only, click-through Liquid Glass card that sits on the w
 - Acceptance:
   - [ ] A clean clone builds and runs by following only the README.
 
+**R14. Clock**
+- A large, condensed, translucent time with the date above it, in the style of the iOS lock screen: the fill is lighter toward the bottom, like glass catching light. It has its own desktop-level, click-through window.
+- Default: **on, to the left of the card, vertically centered.** Because that needs room, the card's default place is the Bottom - Right point, where the pair fits comfortably on the screen.
+- **Twelve anchors** around the card: above (left, center, right), below (left, center, right), left (top, center, bottom), and right (top, center, bottom). Edges align as the name says (`leftCenter` = left of the card, centers aligned). A gap and fine offsets (positive = right and down) adjust from there.
+- **Resizable:** size is the time's font size, 24 to 300 pt. The date scales with it. **The clock never grows past the player's width or height:** a larger size is scaled down to fit (a 300 pt setting gives a clock exactly as tall as the card).
+- **Date options:** above or below the time; aligned left, center or right with the time; a distance from the time (negative pulls closer) and a sideways shift.
+- Settings: show or hide the clock and the date, 12 or 24 hour or follow the system, color, opacity, font, anchor, gap, offsets, size.
+- The clock follows the card: dragging the card in Edit mode moves the clock with it, and the clock is always kept on screen. It also stays put when the card is hidden or idle, because it is placed from the card's frame, not its visibility.
+- **The clock stays visible when nothing is playing.** It is a clock. It hides with "Hide Widget" and with its own switch.
+- Acceptance:
+  - [x] A size larger than the card allows is clamped: the clock window never exceeds the card's width or height (measured: 206x164 against a 540x164 card; unit-tested).
+  - [x] Date placement and alignment change the layout as set (checked above/below and left/right).
+  - [x] All twelve anchors place the clock outside the card on the named side with the named alignment (unit-tested for each).
+  - [x] The clock re-anchors when the card resizes or moves (verified: card scale 1.0 to 1.5 to 0.8 kept the 24 pt gap each time).
+  - [x] The date follows the system locale's order, and the time follows the 12 or 24 hour setting without AM/PM (unit-tested).
+  - [ ] By eye over the real wallpaper: the clock is legible and looks right next to the lock-screen reference. The font is SF compressed semibold, picked as the closest available to the lock-screen face. It is heavier and has square terminals, where the lock screen's are rounded.
+
 ### 5.2 Nice-to-Have (P1)
 
 - Menu bar icon reflects state (playing, paused, idle).
@@ -184,6 +217,7 @@ Designed for, not built:
 - **Skins** as separate packs of the same JSON-defined parameters plus assets, and sharing them.
 - **Alternative layouts** (vertical, compact).
 - **Per-display profiles.**
+- **Clock color sampled from the wallpaper** (the lock screen tints its clock from the wallpaper).
 - **Screen-share and call awareness** (auto-hide).
 
 ## 6. Technical Notes
@@ -199,6 +233,12 @@ Designed for, not built:
 
 **Suggested structure:**
 `AdapterProcess` (spawns perl, parses JSON lines) → `NowPlayingStore` (merges diffs, derives state) → `StateMachine` (Playing, Paused, Idle, Edit; owns the 30s timer) → `CardView` (SwiftUI over `NSGlassEffectView`) with `WaveSource` and `ConfigStore` (JSON) as injected dependencies.
+
+**Lessons from building it (for contributors):**
+- A window resize requested from inside a SwiftUI update (an `onChange` or `onGeometryChange` callback) forces a layout, which updates the view, which reports again. That loop pinned the main thread at about 70-90% CPU and starved every other window, which looked like card rendering bugs. Sizes are ignored when unchanged and the resize is deferred to the next run loop turn.
+- `NSHostingView` clamps its window to SwiftUI's current min and max size unless `sizingOptions = []`, which made resizes lag one edit behind.
+- `NSWindow.animator()` only animates `setFrame`; `setFrameOrigin` silently does nothing.
+- `@Published` publishes even when the new value equals the old, so state shared between windows is only assigned when it changes.
 
 **Risks:**
 - **Private-API fragility.** An OS update can break the adapter. Mitigation: run the adapter's `test` at launch and show a clear unavailable state. The README discloses the dependency. The adapter is actively maintained.
@@ -230,8 +270,8 @@ This is a personal tool without telemetry, so metrics are engineering and self-a
 | # | Question | Owner | Blocking? |
 |---|---|---|---|
 | Q1 | What does Control Center show for a live stream with no duration (empty bar, hidden bar, label)? Mirror it. | Author (check on a live stream) | No, resolve before R2 sign-off |
-| Q2 | How to guarantee legibility: system vibrancy label colors, an adaptive text color sampled from the wallpaper, or an adaptive dark scrim? | Author (prototype over 3 wallpapers) | **Yes, before the UI is final** |
-| Q3 | Does `SMAppService` login-item registration work for a locally built, ad-hoc-signed app on macOS 26? | Author (spike) | No, fallback is a LaunchAgent plist |
+| Q2 | ~~How to guarantee legibility?~~ **Resolved for now:** system label colors (`.primary`, `.secondary`) were confirmed readable over the author's wallpaper. Re-check on a light wallpaper. | Author | No |
+| Q3 | ~~Does `SMAppService` registration work for a locally built, ad-hoc-signed app on macOS 26?~~ **Resolved: yes.** It registers as `enabled, allowed` with no approval step, and unregisters cleanly when switched off. | Author | No |
 | Q4 | What does the stream emit when the playing tab closes, and on seek? Idle must trigger on the former. | Author (run `stream` and test both) | No, but needed for R5 |
 | Q5 | Does the card behave correctly under Show Desktop and Stage Manager (stays visible, stays below windows)? | Author (manual test) | No |
 | Q6 | Does the Swift toolchain's x86_64 target matter? The adapter builds for x86_64 and arm64. Confirm the app builds as a universal binary or for the host only. | Author | No |
